@@ -4,7 +4,6 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import math
-import cv2
 
 from pyradar.filters.frost import frost_filter
 from scipy.ndimage.filters import uniform_filter
@@ -62,25 +61,30 @@ for idx, band in enumerate(grad_band2):
 
 print("done2")
 y_train = np.array(train["is_iceberg"])
-y_train = y_train.reshape(y_train.size,1)
+y_full = y_train.reshape(y_train.size,1)
 
 print x_band1[:, :, :, np.newaxis].shape
 print x_band2[:, :, :, np.newaxis].shape
 print grad_band1[:, :, :, np.newaxis].shape
 print grad_band2[:, :, :, np.newaxis].shape
 
-X_train = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],grad_band1[:, :, :, np.newaxis],grad_band2[:, :, :, np.newaxis]], axis = -1)
+x_band1 = np.load("normalized_band1.npy")
+x_band2 = np.load("normalized_band2.npy")
+
+X_full = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],grad_band1[:, :, :, np.newaxis],grad_band2[:, :, :, np.newaxis]], axis = -1)
 
 print np.shape(x_band1)
 print np.shape(x_band2)
-print np.shape(X_train)
+print np.shape(X_full)
 print np.shape(X_angle_train)
 print np.shape(y_train)
 
-X_train, X_valid, X_angle_train, X_angle_valid, y_train, y_valid = train_test_split(X_train,X_angle_train,y_train, train_size=0.75)
+X_train, X_valid, X_angle_train, X_angle_valid, y_train, y_valid = train_test_split(X_full,X_angle_train,y_full, train_size=0.80)
 
 
 from matplotlib import pyplot
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import cross_val_score
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout, Input, Flatten
@@ -90,6 +94,7 @@ from keras.layers.merge import Concatenate
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.constraints import maxnorm
+from keras.wrappers.scikit_learn import KerasClassifier
 from keras.layers.merge import Concatenate
 from keras.callbacks import ModelCheckpoint, Callback, EarlyStopping
 
@@ -123,37 +128,39 @@ def get_model():
     img_1 = Conv2D(16, kernel_size = (3,3), activation=p_activation) ((BatchNormalization(momentum=bn_model))(input_1))
     img_1 = MaxPooling2D((2,2)) (img_1)
     img_1 = Dense(64, activation = 'relu') (img_1)
-    img_1 = Dropout(0.3)(img_1)
-    img_1 = Conv2D(32, kernel_size = (3,3), activation=p_activation) (img_1)
+    img_1 = Dropout(0.5)(img_1)
+    img_1 = Conv2D(32, kernel_size = (4,4), activation=p_activation) (img_1)
     img_1 = MaxPooling2D((2,2)) (img_1)
     img_1 = Dense(128, activation = 'relu') (img_1)
-    img_1 = Dropout(0.3)(img_1)
-    img_1 = Conv2D(64, kernel_size = (3,3), activation=p_activation) (img_1)
+    img_1 = Dropout(0.5)(img_1)
+    img_1 = Conv2D(64, kernel_size = (5,5), activation=p_activation) (img_1)
     img_1 = MaxPooling2D((2,2)) (img_1)
     img_1 = Dense(256, activation = 'relu') (img_1)
-    img_1 = Dropout(0.3)(img_1)
+    img_1 = Dropout(0.5)(img_1)
     img_1 = MaxPooling2D((2,2)) (img_1)
+
 
     img_2 = Conv2D(16, kernel_size = (3,3), activation=p_activation) ((BatchNormalization(momentum=bn_model))(input_2))
     img_2 = MaxPooling2D((2,2)) (img_2)
     img_2 = Dense(64, activation = 'relu') (img_2)
-    img_2 = Dropout(0.3)(img_2)
-    img_2 = Conv2D(32, kernel_size = (3,3), activation=p_activation) (img_2)
+    img_2 = Dropout(0.5)(img_2)
+    img_2 = Conv2D(32, kernel_size = (4,4), activation=p_activation) (img_2)
     img_2 = MaxPooling2D((2,2)) (img_2)
     img_2 = Dense(128, activation = 'relu') (img_2)
-    img_2 = Dropout(0.3)(img_2)
-    img_2 = Conv2D(64, kernel_size = (3,3), activation=p_activation) (img_2)
+    img_2 = Dropout(0.5)(img_2)
+    img_2 = Conv2D(64, kernel_size = (5,5), activation=p_activation) (img_2)
     img_2 = MaxPooling2D((2,2)) (img_2)
     img_2 = Dense(256, activation = 'relu') (img_2)
-    img_2 = Dropout(0.3)(img_2)
+    img_2 = Dropout(0.5)(img_2)
     img_2 = MaxPooling2D((2,2)) (img_2)
+
 
     print img_1.shape
     print img_2.shape
     combined_imgs = Concatenate()([img_1,img_2])
 
     combined = Dense(16, activation = 'relu') (combined_imgs)
-    combined = Dropout(0.3)(combined)
+    # combined = GlobalMaxPooling2D() (combined)
     combined = Flatten() (combined)
 
     # img_1 = Conv2D(16, kernel_size = (3,3), activation=p_activation) ((BatchNormalization(momentum=bn_model))(input_1))
@@ -170,7 +177,7 @@ def get_model():
     output = Dense(1, activation="sigmoid")(combined)
     
     model = Model([input_1,input_2],  output)
-    optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+    optimizer = Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
 
@@ -178,7 +185,7 @@ model = get_model()
 print(model.summary())
 
 file_path = ".model_weights.hdf5"
-callbacks = get_callbacks(filepath=file_path, patience=5)
+callbacks = get_callbacks(filepath=file_path, patience=100)
 
 print X_train[:,:,:,:2].shape
 print X_train[:,:,:,2:4].shape
@@ -189,6 +196,21 @@ model.fit([X_train[:,:,:,:2],X_train[:,:,:,2:4]], y_train, epochs=25
           , validation_data=([X_valid[:,:,:,:2], X_valid[:,:,:,2:4]], y_valid)
          , batch_size=32
          , callbacks=callbacks)
+
+# estimator = KerasClassifier(build_fn=get_model,nb_epoch=25,batch_size=5,verbose=0)
+# kfold=StratifiedKFold(n_splits=5,shuffle=True, random_state=123)
+# cvscores = []
+# for train, test in kfold.split(X_full, y_full):
+#     # Fit the model
+#     model.fit([X_full[train][:,:,:,:2],X_full[train][:,:,:,2:4]], y_full[train],epochs=25, batch_size=32)
+
+#     scores = model.evaluate([X_full[test][:,:,:,:2],X_full[test][:,:,:,2:4]], y_full[test], verbose=0)
+#     print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+#     cvscores.append(scores[1] * 100)
+
+# print("%.2f%% (+/- %.2f%%)" % (numpy.mean(cvscores), numpy.std(cvscores)))
+# results = cross_val_score(estimator,X_full,y_full, cv=kfold)
+# print("Results: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
 
 # print("IS BERG?")
 # w = 6
