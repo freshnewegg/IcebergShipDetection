@@ -12,7 +12,8 @@ from scipy.ndimage.measurements import variance
 from scipy.ndimage.filters import uniform_filter
 from scipy.ndimage.measurements import variance
 from sklearn.model_selection import train_test_split
-from skimage.restoration import (denoise_tv_chambolle, denoise_bilateral,
+
+from skimage.restoration import (denoise_tv_chambolle, denoise_bilateral,denoise_nl_means,
                                  denoise_wavelet, estimate_sigma)
 
 from keras.preprocessing.image import ImageDataGenerator

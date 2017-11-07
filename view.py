@@ -12,7 +12,7 @@ from scipy.ndimage.measurements import variance
 from scipy.ndimage.filters import uniform_filter
 from scipy.ndimage.measurements import variance
 from sklearn.model_selection import train_test_split
-from skimage.restoration import (denoise_tv_chambolle, denoise_bilateral,
+from skimage.restoration import (denoise_tv_chambolle, denoise_bilateral,denoise_nl_means,
                                  denoise_wavelet, estimate_sigma)
 
 from keras.preprocessing.image import ImageDataGenerator
@@ -48,8 +48,8 @@ x_band2 = np.array([np.array(band).astype(np.float32).reshape(75, 75) for band i
 # 	x_band2[idx] = (np.multiply(10**(band/20), np.sin(X_angle_train[idx]*3.14159/180)/np.cos(X_angle_train[idx]*3.14159/180)))
 
 #calculate gradient band
-grad_band1 = x_band1
-grad_band2 = x_band2
+grad_band1 = np.array(x_band1)
+grad_band2 = np.array(x_band2)
 for idx, band in enumerate(grad_band1):
 	grad = np.gradient(band)
 	m_grad = np.sqrt(grad[0]**2 + grad[1]**2)
@@ -63,15 +63,21 @@ print("done2")
 y_train = np.array(train["is_iceberg"])
 y_full = y_train.reshape(y_train.size,1)
 
-print x_band1[:, :, :, np.newaxis].shape
-print x_band2[:, :, :, np.newaxis].shape
-print grad_band1[:, :, :, np.newaxis].shape
-print grad_band2[:, :, :, np.newaxis].shape
+# for idx, band in enumerate(x_band1):
+#     if idx%10 == 0:
+#         print idx
+#     x_band1[idx] = denoise_nl_means(band-band.min())/(band.max()-band.min())
+# for idx, band in enumerate(x_band2):
+#     if idx%10 == 0:
+#         print idx
+#     x_band2[idx] = denoise_nl_means(band-band.min())/(band.max()-band.min())
 
-x_band1 = np.load("normalized_band1.npy")
-x_band2 = np.load("normalized_band2.npy")
+# np.save("band1_nl_means", x_band1)
+# np.save("band2_nl_means", x_band2)
+nl1 = np.load("band1_nl_means.npy")
+nl2 = np.load("band2_nl_means.npy")
 
-X_full = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],grad_band1[:, :, :, np.newaxis],grad_band2[:, :, :, np.newaxis]], axis = -1)
+X_full = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],nl1[:, :, :, np.newaxis],nl2[:, :, :, np.newaxis]], axis = -1)
 
 print np.shape(x_band1)
 print np.shape(x_band2)
@@ -129,31 +135,28 @@ def get_model():
     img_1 = MaxPooling2D((2,2)) (img_1)
     img_1 = Dense(64, activation = 'relu') (img_1)
     img_1 = Dropout(0.5)(img_1)
-    img_1 = Conv2D(32, kernel_size = (4,4), activation=p_activation) (img_1)
+    img_1 = Conv2D(32, kernel_size = (3,3), activation=p_activation) (img_1)
     img_1 = MaxPooling2D((2,2)) (img_1)
     img_1 = Dense(128, activation = 'relu') (img_1)
     img_1 = Dropout(0.5)(img_1)
-    img_1 = Conv2D(64, kernel_size = (5,5), activation=p_activation) (img_1)
+    img_1 = Conv2D(64, kernel_size = (3,3), activation=p_activation) (img_1)
     img_1 = MaxPooling2D((2,2)) (img_1)
     img_1 = Dense(256, activation = 'relu') (img_1)
     img_1 = Dropout(0.5)(img_1)
-    img_1 = MaxPooling2D((2,2)) (img_1)
 
 
     img_2 = Conv2D(16, kernel_size = (3,3), activation=p_activation) ((BatchNormalization(momentum=bn_model))(input_2))
     img_2 = MaxPooling2D((2,2)) (img_2)
     img_2 = Dense(64, activation = 'relu') (img_2)
     img_2 = Dropout(0.5)(img_2)
-    img_2 = Conv2D(32, kernel_size = (4,4), activation=p_activation) (img_2)
+    img_2 = Conv2D(32, kernel_size = (3,3), activation=p_activation) (img_2)
     img_2 = MaxPooling2D((2,2)) (img_2)
     img_2 = Dense(128, activation = 'relu') (img_2)
     img_2 = Dropout(0.5)(img_2)
-    img_2 = Conv2D(64, kernel_size = (5,5), activation=p_activation) (img_2)
+    img_2 = Conv2D(64, kernel_size = (3,3), activation=p_activation) (img_2)
     img_2 = MaxPooling2D((2,2)) (img_2)
     img_2 = Dense(256, activation = 'relu') (img_2)
     img_2 = Dropout(0.5)(img_2)
-    img_2 = MaxPooling2D((2,2)) (img_2)
-
 
     print img_1.shape
     print img_2.shape
@@ -192,7 +195,7 @@ print X_train[:,:,:,2:4].shape
 print y_train.shape
 print y_valid.shape
 
-model.fit([X_train[:,:,:,:2],X_train[:,:,:,2:4]], y_train, epochs=25
+model.fit([X_train[:,:,:,:2],X_train[:,:,:,2:4]], y_train, epochs=50
           , validation_data=([X_valid[:,:,:,:2], X_valid[:,:,:,2:4]], y_valid)
          , batch_size=32
          , callbacks=callbacks)
