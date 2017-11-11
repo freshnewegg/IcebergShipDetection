@@ -43,6 +43,7 @@ from keras.models import load_model
 
 model = load_model('.model_weights.hdf5')
 train = pd.read_json("./data/processed/train.json")
+train.inc_angle = train.inc_angle.replace('na', 23)
 X_angle_train = np.array(train.inc_angle)
 X_angle_train = X_angle_train.reshape(X_angle_train.size, 1)
 
@@ -64,12 +65,12 @@ for idx, band in enumerate(grad_band2):
 	m_grad = np.sqrt(grad[0]**2 + grad[1]**2)
 	grad_band2[idx] = m_grad
 
-x_band1 = np.load("normalized_band1.npy")
-x_band2 = np.load("normalized_band2.npy")
+normal1 = np.load("band1_nl_means.npy")
+normal2 = np.load("band2_nl_means.npy")
 
 y_train = np.array(train["is_iceberg"])
 y_train = y_train.reshape(y_train.size,1)
-X_train = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],grad_band1[:,:,:,np.newaxis], grad_band2[:,:,:,np.newaxis]], axis = -1)
+X_train = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],normal1[:,:,:,np.newaxis], normal2[:,:,:,np.newaxis],grad_band1[:,:,:,np.newaxis], grad_band2[:,:,:,np.newaxis]], axis = -1)
 
 prediction = model.predict([X_train[:,:,:,:2],X_train[:,:,:,2:4]], verbose=1, batch_size=200)
 

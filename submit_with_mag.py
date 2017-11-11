@@ -3,6 +3,8 @@ from pandas import read_csv
 import numpy as np
 from pyradar.filters.frost import frost_filter
 from pyradar.filters.lee_enhanced import lee_enhanced_filter
+from skimage.restoration import (denoise_tv_chambolle, denoise_bilateral,denoise_nl_means,
+                                 denoise_wavelet, estimate_sigma)
 from scipy.ndimage.filters import uniform_filter
 from scipy.ndimage.measurements import variance
 import matplotlib.pyplot as plt
@@ -25,6 +27,7 @@ def lee_filter(img, size):
     return img_output
 
 test = pd.read_json("./data/processed/test.json")
+test.inc_angle = test.inc_angle.replace('na', 23)
 x_band1 = np.array([np.array(band).astype(np.float32).reshape(75, 75) for band in test["band_1"]])
 x_band2 = np.array([np.array(band).astype(np.float32).reshape(75, 75) for band in test["band_2"]])
 
@@ -60,10 +63,21 @@ for idx, band in enumerate(grad_band2):
 	m_grad = np.sqrt(grad[0]**2 + grad[1]**2)
 	grad_band2[idx] = m_grad
 
-x_band1 = np.load("test_normalized_band1.npy")
-x_band2 = np.load("test_normalized_band2.npy")
+# for idx, band in enumerate(x_band1):
+#     if idx%10 == 0:
+#         print idx
+#     x_band1[idx] = denoise_nl_means(band-band.min())/(band.max()-band.min())
+# for idx, band in enumerate(x_band2):
+#     if idx%10 == 0:
+#         print idx
+#     x_band2[idx] = denoise_nl_means(band-band.min())/(band.max()-band.min())
 
-X_test = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis], grad_band1[:,:,:,np.newaxis], grad_band2[:,:,:,np.newaxis]], axis = -1)
+# np.save("test_band1_nl_means", x_band1)
+# np.save("test_band2_nl_means", x_band2)
+nl1 = np.load("test_band1_nl_means.npy")
+nl2 = np.load("test_band2_nl_means.npy")
+
+X_test = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],nl1[:,:,:,np.newaxis],nl2[:,:,:,np.newaxis]], axis = -1)
 
 model = load_model('.model_weights.hdf5')
 

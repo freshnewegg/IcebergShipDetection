@@ -23,6 +23,14 @@ from keras.preprocessing.image import ImageDataGenerator
 import cv2
 #for rotating pictures
 
+datagen = ImageDataGenerator(
+    rotationshift_range=90,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    horizontal_flip = True,
+    vertical_flip=True
+    )
+
 def lee_filter(img, size):
     img_mean = uniform_filter(img, (size, size))
     img_sqr_mean = uniform_filter(img**2, (size, size))
@@ -118,7 +126,7 @@ X_train = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newa
 # X_train, X_valid, X_angle_train, X_angle_valid, y_train, y_valid = train_test_split(X_train,X_angle_train,y_train, train_size=0.95)
 
 print("IS BERG?")
-w = 1473
+w = 1224
 
 # # print(y_train[w])
 print x_band1[w]
