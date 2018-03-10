@@ -6,9 +6,9 @@ My implementation was a CNN using Keras. I based my CNN on the Squeeze archtectu
 
 Final Score was like 0.18 which was like 250th place 
 
-#Learnings
-*Convolutional Neural Networks
-*Data wrangling
-*Neural network archtecture
-*Early Stopping & other heuristics
-*To win kaggle contests, u need a boatton of GPU's cause everybodys usin ensemble models
+## Learnings
+* Convolutional Neural Networks
+* Data wrangling
+* Neural network archtecture
+* Early Stopping & other heuristics
+* To win kaggle contests, u need a boatton of GPU's cause everybodys usin ensemble models
