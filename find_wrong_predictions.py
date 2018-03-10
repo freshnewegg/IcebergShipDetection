@@ -70,9 +70,10 @@ normal2 = np.load("band2_nl_means.npy")
 
 y_train = np.array(train["is_iceberg"])
 y_train = y_train.reshape(y_train.size,1)
-X_train = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],normal1[:,:,:,np.newaxis], normal2[:,:,:,np.newaxis],grad_band1[:,:,:,np.newaxis], grad_band2[:,:,:,np.newaxis]], axis = -1)
+ratio = x_band1/x_band2
+X_train = np.concatenate([x_band1[:, :, :, np.newaxis], x_band2[:, :, :, np.newaxis],ratio[:,:,:,np.newaxis]], axis = -1)
 
-prediction = model.predict([X_train[:,:,:,:2],X_train[:,:,:,2:4]], verbose=1, batch_size=200)
+prediction = model.predict([X_train], verbose=1, batch_size=200)
 
 print "PRESQUEEZE"
 print prediction[1508]
